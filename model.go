@@ -7,8 +7,8 @@ import (
 )
 
 type Model struct {
-	bos     uint64
-	eos     uint64
+	bos     int64
+	eos     int64
 	tk2id   map[string]uint64
 	id2tk   map[uint64]string
 	maxSize int
@@ -25,6 +25,8 @@ func Load(dir string) (*Model, error) {
 		return nil, err
 	}
 	var ret Model
+	ret.bos = -1
+	ret.eos = -1
 	ret.tk2id = make(map[string]uint64)
 	ret.id2tk = make(map[uint64]string)
 	for i, p := range m.GetPieces() {
@@ -33,9 +35,9 @@ func Load(dir string) (*Model, error) {
 		case ModelProto_SentencePiece_CONTROL:
 			switch piece {
 			case "<s>":
-				ret.bos = uint64(i)
+				ret.bos = int64(i)
 			case "</s>":
-				ret.eos = uint64(i)
+				ret.eos = int64(i)
 			}
 		case ModelProto_SentencePiece_NORMAL:
 			ret.tk2id[piece] = uint64(i)
@@ -50,8 +52,8 @@ func Load(dir string) (*Model, error) {
 
 func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 	var ret []uint64
-	if bos {
-		ret = append(ret, m.bos)
+	if bos && m.bos != -1 {
+		ret = append(ret, uint64(m.bos))
 	}
 	for i := 0; i < len(str); {
 		var tk string
@@ -76,8 +78,8 @@ func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 		ret = append(ret, m.tk2id[tk])
 		i += size
 	}
-	if eos {
-		ret = append(ret, m.eos)
+	if eos && m.eos != -1 {
+		ret = append(ret, uint64(m.eos))
 	}
 	return ret
 }
@@ -85,10 +87,24 @@ func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 func (m *Model) Decode(tks []uint64) string {
 	var ret string
 	for _, tk := range tks {
-		if tk == m.bos || tk == m.eos {
+		if m.bos != -1 && int64(tk) == m.bos {
+			continue
+		}
+		if m.eos != -1 && int64(tk) == m.eos {
 			continue
 		}
 		ret += m.id2tk[tk]
 	}
 	return ret
+}
+
+func (m *Model) Count() int {
+	size := len(m.id2tk)
+	if m.bos != -1 {
+		size++
+	}
+	if m.eos != -1 {
+		size++
+	}
+	return size
 }
