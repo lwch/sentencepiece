@@ -2,6 +2,7 @@ package sentencepiece
 
 import (
 	"os"
+	"strconv"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -45,9 +46,22 @@ func Load(dir string) (*Model, error) {
 			if len(piece) > ret.maxSize {
 				ret.maxSize = len(piece)
 			}
+		case ModelProto_SentencePiece_BYTE:
+			piece = parseByte(piece)
+			ret.tk2id[piece] = uint64(i)
+			ret.id2tk[uint64(i)] = piece
+			if len(piece) > ret.maxSize {
+				ret.maxSize = len(piece)
+			}
 		}
 	}
 	return &ret, nil
+}
+
+func parseByte(str string) string {
+	str = str[1+2 : len(str)-1]
+	ch, _ := strconv.ParseUint(str, 16, 8)
+	return string(rune(ch))
 }
 
 func (m *Model) Encode(str string, bos, eos bool) []uint64 {
@@ -68,10 +82,6 @@ func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 			}
 		}
 		size = len(tk)
-		if tk == " " {
-			tk = string(rune(0x2581)) // replace space to U+2581
-			size = 1
-		}
 		if _, ok := m.tk2id[tk]; !ok {
 			panic("unknown token")
 		}
