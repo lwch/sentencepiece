@@ -17,7 +17,7 @@ func TestEncode(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(m.Encode("Hello, world!", true, true))
+	fmt.Println(m.Encode("PyTorch is", true, false))
 }
 
 func TestDecode(t *testing.T) {
@@ -25,5 +25,5 @@ func TestDecode(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(m.Decode([]uint64{1, 2374, 2}))
+	fmt.Println(m.Decode([]uint64{1, 19737, 1762, 2214, 29882, 338}))
 }

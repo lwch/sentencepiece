@@ -3,6 +3,7 @@ package sentencepiece
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -53,6 +54,12 @@ func Load(dir string) (*Model, error) {
 			if len(piece) > ret.maxSize {
 				ret.maxSize = len(piece)
 			}
+		case ModelProto_SentencePiece_UNKNOWN:
+			ret.tk2id[piece] = uint64(i)
+			ret.id2tk[uint64(i)] = piece
+			if len(piece) > ret.maxSize {
+				ret.maxSize = len(piece)
+			}
 		}
 	}
 	return &ret, nil
@@ -65,6 +72,7 @@ func parseByte(str string) string {
 }
 
 func (m *Model) Encode(str string, bos, eos bool) []uint64 {
+	str = strings.ReplaceAll(str, " ", "▁")
 	var ret []uint64
 	if bos && m.bos != -1 {
 		ret = append(ret, uint64(m.bos))
@@ -105,7 +113,7 @@ func (m *Model) Decode(tks []uint64) string {
 		}
 		ret += m.id2tk[tk]
 	}
-	return ret
+	return strings.ReplaceAll(ret, "▁", " ")
 }
 
 func (m *Model) Count() int {
