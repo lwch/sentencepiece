@@ -126,3 +126,11 @@ func (m *Model) Count() int {
 	}
 	return size
 }
+
+func (m *Model) Bos() int64 {
+	return m.bos
+}
+
+func (m *Model) Eos() int64 {
+	return m.eos
+}
