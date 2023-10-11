@@ -1,6 +1,7 @@
 package sentencepiece
 
 import (
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -17,7 +18,16 @@ type Model struct {
 }
 
 func Load(dir string) (*Model, error) {
-	data, err := os.ReadFile(dir)
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return LoadFrom(f)
+}
+
+func LoadFrom(r io.Reader) (*Model, error) {
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
