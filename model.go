@@ -92,7 +92,6 @@ func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 	}
 	for i := 0; i < len(str); {
 		var tk string
-		var size int
 		for j := m.maxSize; j > 0; j-- {
 			if i+j > len(str) {
 				continue
@@ -102,16 +101,18 @@ func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 				break
 			}
 		}
-		if size == 0 {
-			if m.unk != -1 {
-				ret = append(ret, uint64(m.unk))
-				i++
-				continue
-			}
-			panic("unknown token")
+		size := len(tk)
+		if _, ok := m.tk2id[tk]; ok {
+			ret = append(ret, m.tk2id[tk])
+			i += size
+			continue
 		}
-		ret = append(ret, m.tk2id[tk])
-		i += len(tk)
+		if m.unk != -1 {
+			ret = append(ret, uint64(m.unk))
+			i++
+			continue
+		}
+		panic("unknown token")
 	}
 	if eos && m.eos != -1 {
 		ret = append(ret, uint64(m.eos))
