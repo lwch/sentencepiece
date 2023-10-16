@@ -10,12 +10,11 @@ import (
 )
 
 type Model struct {
-	bos     int64
-	eos     int64
-	unk     int64
-	tk2id   map[string]uint64
-	id2tk   map[uint64]string
-	maxSize int
+	bos   int64
+	eos   int64
+	unk   int64
+	tk2id map[string]uint64
+	id2tk map[uint64]string
 }
 
 func Load(dir string) (*Model, error) {
@@ -56,23 +55,14 @@ func LoadFrom(r io.Reader) (*Model, error) {
 		case ModelProto_SentencePiece_NORMAL:
 			ret.tk2id[piece] = uint64(i)
 			ret.id2tk[uint64(i)] = piece
-			if len(piece) > ret.maxSize {
-				ret.maxSize = len(piece)
-			}
 		case ModelProto_SentencePiece_BYTE:
 			piece = parseByte(piece)
 			ret.tk2id[piece] = uint64(i)
 			ret.id2tk[uint64(i)] = piece
-			if len(piece) > ret.maxSize {
-				ret.maxSize = len(piece)
-			}
 		case ModelProto_SentencePiece_UNKNOWN:
 			ret.unk = int64(i)
 			ret.tk2id[piece] = uint64(i)
 			ret.id2tk[uint64(i)] = piece
-			if len(piece) > ret.maxSize {
-				ret.maxSize = len(piece)
-			}
 		}
 	}
 	return &ret, nil
@@ -90,29 +80,40 @@ func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 	if bos && m.bos != -1 {
 		ret = append(ret, uint64(m.bos))
 	}
-	for i := 0; i < len(str); {
-		var tk string
-		for j := m.maxSize; j > 0; j-- {
-			if i+j > len(str) {
+	var prev int64
+	var cache string
+	var size int
+	prev = -1
+	for _, tk := range str {
+		cache += string(tk)
+		size++
+		if id, ok := m.tk2id[cache]; ok {
+			prev = int64(id)
+			continue
+		}
+		if prev == -1 {
+			if m.unk != -1 {
+				for i := 0; i < size; i++ {
+					ret = append(ret, uint64(m.unk))
+				}
+				prev = -1
+				cache = ""
+				size = 0
 				continue
 			}
-			tk = str[i : i+j]
-			if _, ok := m.tk2id[tk]; ok {
-				break
-			}
+			panic("unknown token")
 		}
-		size := len(tk)
-		if _, ok := m.tk2id[tk]; ok {
-			ret = append(ret, m.tk2id[tk])
-			i += size
+		ret = append(ret, uint64(prev))
+		cache = string(tk)
+		size = 1
+		if n, ok := m.tk2id[cache]; ok {
+			prev = int64(n)
 			continue
 		}
-		if m.unk != -1 {
-			ret = append(ret, uint64(m.unk))
-			i++
-			continue
-		}
-		panic("unknown token")
+		prev = -1
+	}
+	if prev != -1 {
+		ret = append(ret, uint64(prev))
 	}
 	if eos && m.eos != -1 {
 		ret = append(ret, uint64(m.eos))
