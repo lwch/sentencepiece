@@ -12,6 +12,7 @@ import (
 type Model struct {
 	bos     int64
 	eos     int64
+	unk     int64
 	tk2id   map[string]uint64
 	id2tk   map[uint64]string
 	maxSize int
@@ -39,6 +40,7 @@ func LoadFrom(r io.Reader) (*Model, error) {
 	var ret Model
 	ret.bos = -1
 	ret.eos = -1
+	ret.unk = -1
 	ret.tk2id = make(map[string]uint64)
 	ret.id2tk = make(map[uint64]string)
 	for i, p := range m.GetPieces() {
@@ -65,6 +67,7 @@ func LoadFrom(r io.Reader) (*Model, error) {
 				ret.maxSize = len(piece)
 			}
 		case ModelProto_SentencePiece_UNKNOWN:
+			ret.unk = int64(i)
 			ret.tk2id[piece] = uint64(i)
 			ret.id2tk[uint64(i)] = piece
 			if len(piece) > ret.maxSize {
@@ -119,6 +122,10 @@ func (m *Model) Decode(tks []uint64) string {
 			continue
 		}
 		if m.eos != -1 && int64(tk) == m.eos {
+			continue
+		}
+		if m.unk != -1 && int64(tk) == m.unk {
+			ret += "<unk>"
 			continue
 		}
 		ret += m.id2tk[tk]
