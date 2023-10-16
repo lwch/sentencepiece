@@ -102,12 +102,16 @@ func (m *Model) Encode(str string, bos, eos bool) []uint64 {
 				break
 			}
 		}
-		size = len(tk)
-		if _, ok := m.tk2id[tk]; !ok {
+		if size == 0 {
+			if m.unk != -1 {
+				ret = append(ret, uint64(m.unk))
+				i++
+				continue
+			}
 			panic("unknown token")
 		}
 		ret = append(ret, m.tk2id[tk])
-		i += size
+		i += len(tk)
 	}
 	if eos && m.eos != -1 {
 		ret = append(ret, uint64(m.eos))
